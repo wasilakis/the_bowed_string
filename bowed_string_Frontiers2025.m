@@ -31,7 +31,7 @@ str_tor_par = [3.0312e-4; 4.2e-10; 29];
 bow_par = [4; 0.01];
 % bow_par = [M, bow_width] ---> bow parameters
 %           M = number of points to consider under the bow
-%           bow_width = width of the bow in [m]
+%           bow_width = width of the bow in [m] (for point bowing set bow_width=0)
 
 BH_par = [4.5e-3; 4.8297e4; 5.7674];
 % BH_par = [bow_hair mass, spr_const, damp_const] ---> lumped bow-hair parameters
@@ -116,7 +116,7 @@ x_b = L*beta;           % location of the bow
 bowLocS_l = x_b - bow_width/2;    % left end location of the bow on the string
 bowLocS_r = x_b + bow_width/2;    % right end location of the bow on the string
 
-if bow_width == 0
+if bow_width == 0           % point bowing
     bowLocS = x_b;          % chosen points under the bow to compute relative velocity
     M = length(bowLocS);    % number of points chosen under the bow for relative velocity
 else
@@ -265,7 +265,7 @@ spr_const = BH_par(2);
 damp_const = BH_par(3);
 
 % lumped -> distributed parameters
-if bow_width > 0
+if bow_width > 0 
     dens_h = dens_h/bow_width;
     spr_const = spr_const/bow_width;
     damp_const = damp_const/bow_width;
@@ -318,8 +318,8 @@ for n = 2:TS
         dz = 2/dt * (z_av - zmh);
 
         % compute z_ss & derivative wrt vr
-        z_ss = sign(vr).*(fC + (fS - fC)*exp(-(vr/vS).^Sexp) + s2*abs(vr))./s0;
-        dz_ss = ((-Sexp*abs(vr).^(Sexp-1)).*(sign(vr).^Sexp)./(vS^Sexp*s0)).*((fS-fC)*exp(-(vr/vS).^Sexp)) + sign(vr)*s2./s0;
+        z_ss = sign(vr).*(fC + (fS - fC)*exp(-abs(vr/vS).^Sexp) + s2*abs(vr))./s0;
+        dz_ss = ((-Sexp*abs(vr).^(Sexp-1)).*(sign(vr).^Sexp)./(vS^Sexp*s0)).*((fS-fC)*exp(-abs(vr/vS).^Sexp)) + sign(vr)*s2./s0;
 
         ind = vr == 0;
         z_ss(ind) = fS./s0;
@@ -367,8 +367,10 @@ for n = 2:TS
         dN = [dN1v dN1z; dN2v dN2z];
 
         % increase Jacobian when convergence is slow (optional)
+        % coefficient should be fine-tuned
+        coeff = 10;
         if i > 50
-            dN = 1.1*dN;
+            dN = coeff*dN;
         end
 
         % Newton Raphson iteration step
